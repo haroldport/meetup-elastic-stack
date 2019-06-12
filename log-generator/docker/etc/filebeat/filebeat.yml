@@ -3,6 +3,10 @@ filebeat.inputs:
     enabled: true
     paths:
       - '/var/lib/docker/containers/logs/app_log*.log'
+    exclude_lines: ['^DEBUG']
+    multiline.pattern: ^(DEBUG|INFO|ERROR|TRACE|FATAL|WARN).*
+    multiline.negate: true
+    multiline.match: after
 
-output.console:
-  pretty: true
+output.logstash:
+  hosts: ["logstash:5044"]
