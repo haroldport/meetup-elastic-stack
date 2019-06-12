@@ -1,0 +1,11 @@
+/.project
+/target/
+/.settings/
+/.classpath
+/.pmd
+.idea/
+*.iml
+*.iws
+/bin/
+.DS_Store
+docker/var

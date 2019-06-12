@@ -1,0 +1,29 @@
+version: '3'
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.0.0
+    container_name: elasticsearch
+    ports: ['9200:9200']
+    volumes:
+      - './var/es-data:/usr/share/elasticsearch/data'
+    environment:
+      - discovery.type=single-node
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.0.0
+    container_name: filebeat
+    user: root
+    volumes:
+      - './var/filebeat/log/:/var/log/:ro'
+      - './var/filebeat/docker.sock:/var/run/docker.sock'
+      - './var/filebeat/data:/usr/share/filebeat/data'
+      - '/var/logs/meetup/:/var/lib/docker/containers/logs:ro'
+      - './etc/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml'
+    command: ["--strict.perms=false"]
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.0.0
+    container_name: kibana
+    ports: ['5601:5601']
+    depends_on:
+      - 'elasticsearch'
