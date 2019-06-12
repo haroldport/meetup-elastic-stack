@@ -17,9 +17,18 @@ services:
       - './var/filebeat/log/:/var/log/:ro'
       - './var/filebeat/docker.sock:/var/run/docker.sock'
       - './var/filebeat/data:/usr/share/filebeat/data'
-      - '/var/logs/meetup/:/var/lib/docker/containers/logs:ro'
+      - '../executable/logs:/var/lib/docker/containers/logs:ro'
       - './etc/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml'
     command: ["--strict.perms=false"]
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.0.0
+    container_name: logstash
+    ports: ['9600:9600']
+    depends_on: ['elasticsearch']
+    volumes:
+      - './etc/logstash/pipeline:/usr/share/logstash/pipeline'
+      - './etc/logstash/templates:/usr/share/logstash/templates'
 
   kibana:
     image: docker.elastic.co/kibana/kibana:7.0.0

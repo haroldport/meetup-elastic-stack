@@ -1,19 +1,8 @@
-logging.level: info
-logging.to_files: false
-
-#------------------------------ Log input --------------------------------
 filebeat.inputs:
   - type: log
     enabled: true
     paths:
-      - '/var/lib/docker/containers/logs/*.log'
-    json.keys_under_root: true
+      - '/var/lib/docker/containers/logs/app_log*.log'
 
-    processors:
-      - decode_json_fields:
-          fields: ['message']
-          target: json
-
-#========================== Elasticsearch output ===============================
-output.elasticsearch:
-  hosts: ["elasticsearch:9200"]
+output.console:
+  pretty: true
