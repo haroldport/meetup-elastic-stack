@@ -65,3 +65,9 @@ ejemplo:
   de 500ms entre cada iteración.
 
 ```
+
+* Para iniciar el Elastic Stack (elasticsearch, filebeat, logstash y kibana):
+```console
+foo@bar:~$ cd log-generator/docker
+foo@bar:~$ docker-compose up -d
+```
