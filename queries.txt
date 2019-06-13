@@ -1,0 +1,455 @@
+1.- Match all
+GET log-generator-*/_search
+{
+  "query": {
+    "match_all": {}
+  }
+}
+
+
+2.- Full text queries (aplican los analizadores del campo que buscamos)
+2.1.- Match query
+Busqueda exacta porque el campo es de tipo keyword
+GET log-generator-*/_search
+{
+  "query": {
+    "match": {
+      "type": "JAVA_ERROR"
+    }
+  }
+}
+
+Busqueda analizada porque el campo es de tipo text (se tokeniza)
+GET log-generator-*/_search
+{
+  "query": {
+    "match": {
+      "stacktrace": "User not found"
+    }
+  }
+}
+
+Si me interesa buscar coincidencias de todo el texto y que no se tokenice
+GET log-generator-*/_search
+{
+  "query": {
+    "match": {
+      "stacktrace": {
+        "query": "User not found",
+        "operator": "and"
+      }
+    }
+  }
+}
+
+2.2.- Multimatch query (busquedas en mas de un campo)
+GET log-generator-*/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "SMTP",
+      "fields": ["stacktrace", "type"]
+    }
+  }
+}
+
+
+3.- Term queries (el query que enviamos no es analizado sino que se evalua tal cual se envia)
+Son mas rapidas ya que no se aplica ningun analisis ni tratamiento sobre los documentos
+3.1.- Term
+GET log-generator-*/_search
+{
+  "query": {
+    "term": {
+      "type": {
+        "value": "JAVA_ERROR"
+      }
+    }
+  }
+}
+
+En el siguiente caso no obtenemos nada, ya que no se analiza el string de consulta
+GET log-generator-*/_search
+{
+  "query": {
+    "term": {
+      "stacktrace": {
+        "value": "User not found"
+      }
+    }
+  }
+}
+
+3.2.- Wildcard queries (son un poco mas permisivas, se pueden usar patrones para realizar las busquedas, no tenemos que poner el texto exacto que
+queremos buscar)
+GET log-generator-*/_search
+{
+  "query": {
+    "wildcard": {
+      "type": {
+        "value": "J*_ERROR"
+      }
+    }
+  }
+}
+
+3.3.- Fuzzy queries (nos permite tener typos en nuestra busqueda)
+GET log-generator-*/_search
+{
+  "query": {
+    "fuzzy": {
+      "type": "JOVA_ERRAR"
+    }
+  }
+}
+
+4.- Boolean queries (queries compuestas, concatenar mas de una query)
+Tres tipos
+must --> todas las queries se tienen que cumplir, una especie de and
+must_nost --> queries que queremos excluir o que no queremos que se cumplan
+should --> queries que se pueden cumplir o no, una especie de or
+
+GET log-generator-*/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "type": {
+              "value": "LOGIN"
+            }
+          }
+        },
+        {
+          "match": {
+            "responseText": "bloqueado"
+          }
+        }
+      ],
+      "minimum_should_match": 1, 
+      "should": [
+        {
+          "term": {
+            "user": {
+              "value": "ironMan"
+            }
+          }
+        },
+        {
+          "term": {
+            "user": {
+              "value": "bucky"
+            }
+          }
+        },
+        {
+          "term": {
+            "user": {
+              "value": "spiderman"
+            }
+          }
+        }
+      ],
+      "must_not": [
+        {
+          "term": {
+            "geoip.country_name.keyword": {
+              "value": "France"
+            }
+          }
+        }
+      ],
+      "filter": [
+        {
+          "term": {
+            "geoip.continent_code.keyword": "NA"
+          }
+        }
+      ]
+    }
+  }
+}
+
+La diferencia cuando usamos query y filter. Es que ES cuando usa query los resultados los devuelve con una relevancia, esto es util, cuando
+tenemos buscadores donde nos interesa la relevancia de los resultados. Por el contrario cuando usamos filter no nos interesa esta relevancia,
+simplemente se evalua si la query se cumple o no, si se cumple nos devuelve datos sino no, por tanto son mas rapido de ejecutarse.
+
+Priorizando resultados (relevancia)
+Usamos boost
+GET log-generator-*/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "type": {
+              "value": "LOGIN"
+            }
+          }
+        },
+        {
+          "match": {
+            "responseText": "bloqueado"
+          }
+        }
+      ],
+      "minimum_should_match": 1, 
+      "should": [
+        {
+          "term": {
+            "user": {
+              "value": "ironMan"
+            }
+          }
+        },
+        {
+          "term": {
+            "user": {
+              "value": "bucky",
+              "boost": 2
+            }
+          }
+        },
+        {
+          "term": {
+            "user": {
+              "value": "spiderman"
+            }
+          }
+        }
+      ],
+      "must_not": [
+        {
+          "term": {
+            "geoip.country_name.keyword": {
+              "value": "France"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+
+5.- Queries geolocalizadas
+GET log-generator-*/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "type": {
+              "value": "LOGIN"
+            }
+          }
+        },
+        {
+          "match": {
+            "responseText": "bloqueado"
+          }
+        }
+      ],
+      "filter": [
+        {
+          "term": {
+            "geoip.continent_code.keyword": "EU"
+          }
+        },
+        {
+          "geo_distance": {
+            "distance": "2000km",
+            "geoip.location": {
+              "lat": 40,
+              "lon": -2
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+6.- Agregaciones (una de las caracteristicas mas potentes de ES)
+Agregaciones por terminos (buckets)
+GET log-generator-*/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "type": {
+              "value": "LOGIN"
+            }
+          }
+        },
+        {
+          "match": {
+            "responseText": "bloqueado"
+          }
+        }
+      ]
+    }
+  },
+  "size": 0, 
+  "aggs": {
+    "ByUser": {
+      "terms": {
+        "field": "user",
+        "size": 20
+      }
+    }
+  }
+}
+
+Operaciones sobre datos numericos
+GET log-generator-*/_search
+{
+  "query": {
+    "term": {
+      "type": "PERFORMANCE"
+    }
+  },
+  "size": 0, 
+  "aggs": {
+    "Avg": {
+      "avg": {
+        "field": "duration"
+      }
+    }
+  }
+}
+
+Mostrar varias estadisticas
+GET log-generator-*/_search
+{
+  "query": {
+    "term": {
+      "type": "PERFORMANCE"
+    }
+  },
+  "size": 0, 
+  "aggs": {
+    "Stats": {
+      "stats": {
+        "field": "duration"
+      }
+    }
+  }
+}
+
+Puedo tener multiples agregaciones
+GET log-generator-*/_search
+{
+  "query": {
+    "term": {
+      "type": "PERFORMANCE"
+    }
+  },
+  "size": 0, 
+  "aggs": {
+    "ByUser": {
+      "terms": {
+        "field": "user",
+        "size": 5
+      }
+    },
+    "Stats": {
+      "stats": {
+        "field": "duration"
+      }
+    }
+  }
+}
+
+Puedo crear mis propios buckets mediante rangos
+GET log-generator-*/_search
+{
+  "query": {
+    "term": {
+      "type": "PERFORMANCE"
+    }
+  },
+  "size": 0,
+  "aggs": {
+    "ByDuration": {
+      "filters": {
+        "filters": {
+          "fast": {
+            "range": {
+              "duration": {
+                "lt": 1
+              }
+            }
+          },
+          "regular": {
+            "range": {
+              "duration": {
+                "gte": 1,
+                "lte": 5
+              }
+            }
+          },
+          "slow": {
+            "range": {
+              "duration": {
+                "gt": 5
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+De tipo histograma
+GET log-generator-*/_search
+{
+  "query": {
+    "term": {
+      "type": "PERFORMANCE"
+    }
+  },
+  "size": 0,
+  "aggs": {
+    "PerformanceOverTime": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "interval": "minute"
+      }
+    },
+    "DurationHistogram": {
+      "date_histogram": {
+        "field": "duration",
+        "interval": 2
+      }
+    }
+  }
+}
+
+Subagregados
+GET log-generator-*/_search
+{
+  "size": 0,
+  "aggs": {
+    "ByUser": {
+      "terms": {
+        "field": "user",
+        "size": 100
+      },
+      "aggs": {
+        "ByType": {
+          "terms": {
+            "field": "type",
+            "size": 3
+          }
+        }
+      }
+    }
+  }
+}
