@@ -10,7 +10,7 @@ class HelloShould {
     @Test
     void greetWithAHelloMessageToTheNameItReceives() {
         Logger logger = LogManager.getLogger(HelloShould.class);
-        logger.error("Hello World!");
+        logger.info("Hello World!");
 
         Hello hello = new Hello();
         assertEquals("Hello Harold", hello.sayHello("Harold"));
